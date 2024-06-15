@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Ai Vision"
 include(":app")
+include(":library_openai-whisper-android")
