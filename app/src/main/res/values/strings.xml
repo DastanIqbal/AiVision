@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Ai Vision</string>
+    <string name="chat_label">Message</string>
+    <string name="action_send">Send</string>
+</resources>
