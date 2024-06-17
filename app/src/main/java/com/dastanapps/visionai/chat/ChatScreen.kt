@@ -59,13 +59,17 @@ internal fun ChatRoute(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val assetManager = context.assets
+    chatViewModel.audioFilePath = "${context.externalCacheDir?.absolutePath}/tts.mp3"
 
     Scaffold(
         bottomBar = {
             RecordAudio(
                 audioRecorder = audioRecorder,
-                onSendVoice = {  ->
-                    chatViewModel.sendVoice(assets = assetManager,audioRecorder.outputFile)
+                onSendVoice = { ->
+                    chatViewModel.transcribeVoiceToText(
+                        assets = assetManager,
+                        audioRecorder.outputFile
+                    )
                 },
                 resetScroll = {
                     coroutineScope.launch {

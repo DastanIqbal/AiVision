@@ -16,9 +16,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "Ai Vision"
 include(":app")
 include(":library_openai-whisper-android")
+include(":googlecloudtts")

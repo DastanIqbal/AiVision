@@ -22,7 +22,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
                     // Initialize a GenerativeModel with the `gemini-flash` AI model for chat
                     val generativeModel = GenerativeModel(
                         modelName = GEMINI_MODEL_FLASH,
-                        apiKey = BuildConfig.apiKey,
+                        apiKey = BuildConfig.GoogleCloudApiKey,
                         generationConfig = config
                     )
                     ChatViewModel(generativeModel)
