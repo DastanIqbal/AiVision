@@ -6,7 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dastanapps.openai.whisper.Loader
 import com.dastanapps.visionai.BuildConfig
+import com.dastanapps.visionai.generativeModel
+import com.dastanapps.visionai.getExchangeRate
+import com.dastanapps.visionai.saveFile
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.FunctionResponsePart
 import com.google.ai.client.generativeai.type.asTextOrNull
 import com.google.ai.client.generativeai.type.content
 import darren.googlecloudtts.GoogleCloudTTSFactory
@@ -18,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class ChatViewModel(
     generativeModel: GenerativeModel
@@ -61,6 +66,55 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 val response = chat.sendMessage(userMessage)
+                response.functionCalls.let { functionCalls ->
+                    functionCalls.forEach {  functionCall ->
+                        if ( functionCall.name == saveFile.name) {
+                            val matchedFunction = generativeModel.tools?.flatMap { it.functionDeclarations }
+                                    ?.first { it.name ==  functionCall.name }
+                            val apiResponse: JSONObject =
+                                matchedFunction?.execute( functionCall) ?: JSONObject()
+                            val functionResponse = chat.sendMessage(
+                                content(role = Participant.FUNCTION.name.lowercase()) {
+                                    part(FunctionResponsePart( functionCall.name, apiResponse))
+                                }
+                            )
+                            functionResponse.text?.run {
+                                _uiState.value.replaceLastPendingMessage()
+                                _uiState.value.addMessage(
+                                    ChatMessage(
+                                        text = functionResponse.text ?: "",
+                                        participant = Participant.FUNCTION,
+                                        isPending = false
+                                    )
+                                )
+                            }
+                            return@launch
+                        }else if ( functionCall.name == getExchangeRate.name) {
+                            val matchedFunction =
+                                generativeModel.tools?.flatMap { it.functionDeclarations }
+                                    ?.first { it.name ==  functionCall.name }
+                            val apiResponse: JSONObject =
+                                matchedFunction?.execute( functionCall) ?: JSONObject()
+                            val functionResponse = chat.sendMessage(
+                                content(role = Participant.FUNCTION.name.lowercase()) {
+                                    part(FunctionResponsePart( functionCall.name, apiResponse))
+                                }
+                            )
+                            functionResponse.text?.run {
+                                _uiState.value.replaceLastPendingMessage()
+                                _uiState.value.addMessage(
+                                    ChatMessage(
+                                        text = functionResponse.text ?: "",
+                                        participant = Participant.FUNCTION,
+                                        isPending = false
+                                    )
+                                )
+                            }
+
+                            return@launch
+                        }
+                    }
+                }
 
                 _uiState.value.replaceLastPendingMessage()
 
@@ -75,7 +129,7 @@ class ChatViewModel(
 
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
-                            playVoice(modelResponse)
+//                            playVoice(modelResponse)
                         } catch (e: Exception) {
                             e.printStackTrace()
                             postError(e)

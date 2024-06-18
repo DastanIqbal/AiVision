@@ -3,7 +3,7 @@ package com.dastanapps.visionai.chat
 import java.util.UUID
 
 enum class Participant {
-    USER, MODEL, ERROR
+    USER, MODEL, FUNCTION, ERROR
 }
 
 data class ChatMessage(

@@ -63,20 +63,30 @@ internal fun ChatRoute(
 
     Scaffold(
         bottomBar = {
-            RecordAudio(
-                audioRecorder = audioRecorder,
-                onSendVoice = { ->
-                    chatViewModel.transcribeVoiceToText(
-                        assets = assetManager,
-                        audioRecorder.outputFile
-                    )
-                },
-                resetScroll = {
-                    coroutineScope.launch {
-                        listState.scrollToItem(0)
+            Row {
+                MessageInput(
+                    onSendMessage = { message ->
+                        chatViewModel.sendMessage(message)
+                    },
+                    resetScroll = {
+
                     }
-                }
-            )
+                )
+                RecordAudio(
+                    audioRecorder = audioRecorder,
+                    onSendVoice = { ->
+                        chatViewModel.transcribeVoiceToText(
+                            assets = assetManager,
+                            audioRecorder.outputFile
+                        )
+                    },
+                    resetScroll = {
+                        coroutineScope.launch {
+                            listState.scrollToItem(0)
+                        }
+                    }
+                )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -110,12 +120,14 @@ fun ChatBubbleItem(
     chatMessage: ChatMessage
 ) {
     val isModelMessage = chatMessage.participant == Participant.MODEL ||
+            chatMessage.participant == Participant.FUNCTION ||
             chatMessage.participant == Participant.ERROR
 
     val backgroundColor = when (chatMessage.participant) {
         Participant.MODEL -> MaterialTheme.colorScheme.primaryContainer
-        Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
+        Participant.FUNCTION -> MaterialTheme.colorScheme.secondaryContainer
         Participant.ERROR -> MaterialTheme.colorScheme.errorContainer
+        Participant.USER -> MaterialTheme.colorScheme.tertiaryContainer
     }
 
     val bubbleShape = if (isModelMessage) {
