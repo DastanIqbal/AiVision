@@ -16,7 +16,7 @@ val GenerativeViewModelFactory = object : ViewModelProvider.Factory {
         return with(viewModelClass) {
             when {
                 isAssignableFrom(ChatViewModel::class.java) -> {
-                    ChatViewModel(generativeModel)
+                    ChatViewModel(GenAIConfig.generativeModel)
                 }
 
                 else ->

@@ -6,10 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dastanapps.openai.whisper.Loader
 import com.dastanapps.visionai.BuildConfig
-import com.dastanapps.visionai.generativeModel
-import com.dastanapps.visionai.getExchangeRate
-import com.dastanapps.visionai.saveFile
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.FunctionCallPart
+import com.google.ai.client.generativeai.type.FunctionDeclaration
 import com.google.ai.client.generativeai.type.FunctionResponsePart
 import com.google.ai.client.generativeai.type.asTextOrNull
 import com.google.ai.client.generativeai.type.content
@@ -25,7 +24,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 class ChatViewModel(
-    generativeModel: GenerativeModel
+    private val generativeModel: GenerativeModel
 ) : ViewModel() {
     private val chat = generativeModel.startChat(
         history = listOf(
@@ -68,51 +67,10 @@ class ChatViewModel(
                 val response = chat.sendMessage(userMessage)
                 response.functionCalls.let { functionCalls ->
                     functionCalls.forEach {  functionCall ->
-                        if ( functionCall.name == saveFile.name) {
-                            val matchedFunction = generativeModel.tools?.flatMap { it.functionDeclarations }
-                                    ?.first { it.name ==  functionCall.name }
-                            val apiResponse: JSONObject =
-                                matchedFunction?.execute( functionCall) ?: JSONObject()
-                            val functionResponse = chat.sendMessage(
-                                content(role = Participant.FUNCTION.name.lowercase()) {
-                                    part(FunctionResponsePart( functionCall.name, apiResponse))
-                                }
-                            )
-                            functionResponse.text?.run {
-                                _uiState.value.replaceLastPendingMessage()
-                                _uiState.value.addMessage(
-                                    ChatMessage(
-                                        text = functionResponse.text ?: "",
-                                        participant = Participant.FUNCTION,
-                                        isPending = false
-                                    )
-                                )
-                            }
-                            return@launch
-                        }else if ( functionCall.name == getExchangeRate.name) {
-                            val matchedFunction =
-                                generativeModel.tools?.flatMap { it.functionDeclarations }
-                                    ?.first { it.name ==  functionCall.name }
-                            val apiResponse: JSONObject =
-                                matchedFunction?.execute( functionCall) ?: JSONObject()
-                            val functionResponse = chat.sendMessage(
-                                content(role = Participant.FUNCTION.name.lowercase()) {
-                                    part(FunctionResponsePart( functionCall.name, apiResponse))
-                                }
-                            )
-                            functionResponse.text?.run {
-                                _uiState.value.replaceLastPendingMessage()
-                                _uiState.value.addMessage(
-                                    ChatMessage(
-                                        text = functionResponse.text ?: "",
-                                        participant = Participant.FUNCTION,
-                                        isPending = false
-                                    )
-                                )
-                            }
-
-                            return@launch
-                        }
+                        val matchedFunction = generativeModel.tools?.flatMap { it.functionDeclarations }
+                            ?.first { it.name ==  functionCall.name }
+                        functionCalling(functionCall, matchedFunction)
+                        return@launch
                     }
                 }
 
@@ -140,6 +98,26 @@ class ChatViewModel(
                 e.printStackTrace()
                 postError(e)
             }
+        }
+    }
+
+    private suspend fun functionCalling(functionCall: FunctionCallPart, function: FunctionDeclaration?){
+        val apiResponse: JSONObject =
+            function?.execute(functionCall) ?: JSONObject()
+        val functionResponse = chat.sendMessage(
+            content(role = Participant.FUNCTION.name.lowercase()) {
+                part(FunctionResponsePart( functionCall.name, apiResponse))
+            }
+        )
+        functionResponse.text?.run {
+            _uiState.value.replaceLastPendingMessage()
+            _uiState.value.addMessage(
+                ChatMessage(
+                    text = functionResponse.text ?: "",
+                    participant = Participant.FUNCTION,
+                    isPending = false
+                )
+            )
         }
     }
 
